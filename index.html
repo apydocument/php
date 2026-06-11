@@ -72,6 +72,12 @@
         /* Tool Active State */
         .tool-active { background-color: #dbeafe !important; border-color: #3b82f6 !important; color: #1d4ed8 !important; }
 
+img, canvas, video, .modal-content {
+    -webkit-touch-callout: none !important;
+    -webkit-user-select: none !important;
+    user-select: none !important;
+}
+
         
     </style>
 </head>
@@ -83,7 +89,7 @@
             <div class="mb-6">
                 <svg class="w-16 h-16 mx-auto text-blue-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
                 <h1 class="text-2xl font-bold text-gray-800">অন্নপূর্ণা ভান্ডারের ডকুমেন্ট তৈরী</h1>
-                <p class="text-sm text-gray-500 mt-2">Design & Developed by RSS IT</p>
+                <p class="text-sm text-orange-500 mt-2">Design & Developed by IT Team</p>
             </div>
             <button id="btnStart" class="w-full bg-blue-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg hover:bg-blue-700 active:scale-95 transition-all text-lg flex items-center justify-center gap-2">
                 Blank Page নিন
@@ -193,7 +199,8 @@
     <!-- MODALS -->
 
     <!-- Filters/Adjust Modal -->
-    <div id="adjustModal" class="modal-overlay fixed inset-0 flex-col items-center justify-center p-4">
+    <div id="adjustModal" class="modal-overlay fixed inset-0 flex-col items-center justify-end p-4 pb-10">
+
         <div class="modal-content bg-white w-full max-w-sm rounded-2xl shadow-2xl p-6 space-y-4">
             <div class="flex justify-between items-center mb-2">
                 <h3 class="font-bold text-lg text-gray-800">Adjust Filters</h3>
@@ -293,20 +300,7 @@
         </div>
     </div>
 
-    <!-- Camera Modal -->
-    <div id="cameraModal" class="modal-overlay fixed inset-0 flex-col items-center justify-center p-4">
-        <div class="modal-content bg-black w-full max-w-md relative rounded-2xl shadow-2xl">
-            <div class="absolute top-4 right-4 z-20">
-                <button onclick="closeCameraModal()" class="bg-white/20 backdrop-blur text-white rounded-full p-2 hover:bg-red-500">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                </button>
-            </div>
-            <video id="cameraVideo" autoplay playsinline class="w-full h-auto bg-black rounded-t-2xl max-h-[70vh] object-cover"></video>
-            <div class="p-6 bg-gray-900 flex justify-center rounded-b-2xl border-t border-gray-800">
-                <button onclick="takePhoto()" class="w-16 h-16 bg-white rounded-full border-4 border-gray-300 shadow-[0_0_15px_rgba(255,255,255,0.5)]"></button>
-            </div>
-        </div>
-    </div>
+  
 
     <!-- PDF Viewer Modal -->
     <div id="pdfModal" class="modal-overlay fixed inset-0 flex-col items-center justify-center p-4">
@@ -516,27 +510,95 @@
         }
         function closePdfModal() { document.getElementById('pdfModal').classList.remove('active'); }
 
-        // --- CAMERA ---
-        let localStream = null;
-        async function openCameraModal() {
-            document.getElementById('cameraModal').classList.add('active');
-            try { localStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: "environment" } } }); } 
-            catch (e1) { try { localStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } }); } 
-            catch (e2) { try { localStream = await navigator.mediaDevices.getUserMedia({ video: true }); } 
-            catch (e3) { alert("Camera error"); closeCameraModal(); return; } } }
-            document.getElementById('cameraVideo').srcObject = localStream;
+      // --- CAMERA ---
+let localStream = null;
+let videoTrack = null;
+let flashState = false;
+
+async function openCameraModal() {
+    document.getElementById('cameraModal').classList.add('active');
+    try { 
+        localStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: "environment" } } }); 
+    } 
+    catch (e1) { 
+        try { localStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } }); } 
+        catch (e2) { try { localStream = await navigator.mediaDevices.getUserMedia({ video: true }); } 
+        catch (e3) { alert("ক্যামেরা অন করতে সমস্যা হচ্ছে। পারমিশন চেক করুন।"); closeCameraModal(); return; } } 
+    }
+    
+    const video = document.getElementById('cameraVideo');
+    video.srcObject = localStream;
+
+    // Check Flash (Torch) Capability safely
+    try {
+        videoTrack = localStream.getVideoTracks()[0];
+        const btnFlash = document.getElementById('btnFlash');
+        
+        // Some devices don't support getCapabilities, so we wrap it in try-catch
+        if (videoTrack.getCapabilities && videoTrack.getCapabilities().torch) {
+            btnFlash.classList.remove('hidden');
+            flashState = false;
+            btnFlash.classList.remove('bg-yellow-500', 'text-black');
+            btnFlash.classList.add('text-white');
+        } else {
+            if(btnFlash) btnFlash.classList.add('hidden');
         }
-        function closeCameraModal() {
-            document.getElementById('cameraModal').classList.remove('active');
-            if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
+    } catch(err) {
+        console.log("Flash not supported or readable on this device/browser.");
+    }
+}
+
+async function toggleFlash() {
+    if (!videoTrack) return;
+    flashState = !flashState;
+    try {
+        await videoTrack.applyConstraints({
+            advanced: [{ torch: flashState }]
+        });
+        const btnFlash = document.getElementById('btnFlash');
+        if(flashState) {
+            btnFlash.classList.add('bg-yellow-500', 'text-black');
+            btnFlash.classList.remove('text-white');
+        } else {
+            btnFlash.classList.remove('bg-yellow-500', 'text-black');
+            btnFlash.classList.add('text-white');
         }
-        function takePhoto() {
-            const v = document.getElementById('cameraVideo');
-            const c = document.createElement('canvas'); c.width = v.videoWidth; c.height = v.videoHeight;
-            c.getContext('2d').drawImage(v, 0, 0);
-            fabric.Image.fromURL(c.toDataURL('image/png'), centerAndAddItem);
-            closeCameraModal();
-        }
+    } catch (err) {
+        console.error("Flash error:", err);
+        flashState = !flashState; // Revert state if error occurs
+    }
+}
+
+function closeCameraModal() {
+    document.getElementById('cameraModal').classList.remove('active');
+    if (localStream) { 
+        try {
+            // Turn off flash before closing if it's on
+            if(videoTrack && flashState) {
+                videoTrack.applyConstraints({advanced: [{torch: false}]}).catch(e => console.log(e));
+            }
+        } catch(e) {}
+        
+        localStream.getTracks().forEach(t => t.stop()); 
+        localStream = null; 
+        videoTrack = null;
+        flashState = false;
+    }
+}
+
+function takePhoto() {
+    const v = document.getElementById('cameraVideo');
+    const c = document.createElement('canvas'); 
+    c.width = v.videoWidth; 
+    c.height = v.videoHeight;
+    c.getContext('2d').drawImage(v, 0, 0);
+    
+    // Add captured image to canvas
+    fabric.Image.fromURL(c.toDataURL('image/png'), centerAndAddItem);
+    
+    closeCameraModal();
+}
+
 
         // --- FILTERS ---
         function openAdjustModal() {
@@ -1013,6 +1075,9 @@
             }
         }
 
+
+
+
         // --- STANDARD SQUARE CROP ---
         function cropSelectedElement() {
             const activeObj = canvas.getActiveObject();
@@ -1106,6 +1171,8 @@
                 }
             } catch(e) { alert("Download failed."); } finally { btn.innerHTML = orig; btn.disabled = false; }
         }
+        
+        document.addEventListener('contextmenu', event => event.preventDefault());
     </script>
 </body>
 </html>
