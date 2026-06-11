@@ -72,12 +72,6 @@
         /* Tool Active State */
         .tool-active { background-color: #dbeafe !important; border-color: #3b82f6 !important; color: #1d4ed8 !important; }
 
-img, canvas, video, .modal-content {
-    -webkit-touch-callout: none !important;
-    -webkit-user-select: none !important;
-    user-select: none !important;
-}
-
         
     </style>
 </head>
@@ -89,7 +83,7 @@ img, canvas, video, .modal-content {
             <div class="mb-6">
                 <svg class="w-16 h-16 mx-auto text-blue-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
                 <h1 class="text-2xl font-bold text-gray-800">অন্নপূর্ণা ভান্ডারের ডকুমেন্ট তৈরী</h1>
-                <p class="text-sm text-orange-500 mt-2">Design & Developed by IT Team</p>
+                <p class="text-sm text-gray-500 mt-2">Design & Developed by RSS IT</p>
             </div>
             <button id="btnStart" class="w-full bg-blue-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg hover:bg-blue-700 active:scale-95 transition-all text-lg flex items-center justify-center gap-2">
                 Blank Page নিন
@@ -198,13 +192,12 @@ img, canvas, video, .modal-content {
 
     <!-- MODALS -->
 
-    <!-- Filters/Adjust Modal -->
-    <div id="adjustModal" class="modal-overlay fixed inset-0 flex-col items-center justify-end p-4 pb-10">
-
-        <div class="modal-content bg-white w-full max-w-sm rounded-2xl shadow-2xl p-6 space-y-4">
-            <div class="flex justify-between items-center mb-2">
+    <!-- Filters/Adjust Modal (Modified for Bottom positioning & Transparent UI) -->
+    <div id="adjustModal" class="fixed inset-0 z-[60] hidden flex-col items-center justify-end pb-8 sm:pb-12 pointer-events-none">
+        <div class="bg-white/95 backdrop-blur-xl w-[90%] max-w-sm rounded-3xl shadow-[0_10px_40px_rgba(0,0,0,0.2)] border border-gray-200 p-5 space-y-4 pointer-events-auto transform transition-transform mx-4">
+            <div class="flex justify-between items-center mb-1">
                 <h3 class="font-bold text-lg text-gray-800">Adjust Filters</h3>
-                <button onclick="closeAdjustModal()" class="text-red-500 font-bold text-xl">&times;</button>
+                <button onclick="closeAdjustModal()" class="text-red-500 font-bold text-2xl hover:scale-110 transition-transform leading-none">&times;</button>
             </div>
             
             <div class="space-y-3">
@@ -226,7 +219,7 @@ img, canvas, video, .modal-content {
                 </div>
             </div>
             
-            <button onclick="closeAdjustModal()" class="w-full mt-4 bg-blue-600 text-white font-bold py-2 rounded-xl shadow hover:bg-blue-700 active:scale-95">DONE</button>
+            <button onclick="closeAdjustModal()" class="w-full mt-2 bg-blue-600 text-white font-bold py-3 rounded-xl shadow hover:bg-blue-700 active:scale-95 transition-all">DONE</button>
         </div>
     </div>
 
@@ -300,7 +293,27 @@ img, canvas, video, .modal-content {
         </div>
     </div>
 
-  
+    <!-- Camera Modal -->
+    <div id="cameraModal" class="modal-overlay fixed inset-0 flex-col items-center justify-center p-4">
+        <div class="modal-content bg-black w-full max-w-md relative rounded-2xl shadow-2xl">
+            <!-- Flash Toggle Button -->
+            <div class="absolute top-4 left-4 z-20">
+                <button id="btnToggleFlash" onclick="toggleFlash()" class="bg-white/20 backdrop-blur text-white rounded-full p-2 hover:bg-gray-700 transition-colors" title="Toggle Flash" style="display: none;">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                </button>
+            </div>
+            <!-- Close Button -->
+            <div class="absolute top-4 right-4 z-20">
+                <button onclick="closeCameraModal()" class="bg-white/20 backdrop-blur text-white rounded-full p-2 hover:bg-red-500 transition-colors">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <video id="cameraVideo" autoplay playsinline class="w-full h-auto bg-black rounded-t-2xl max-h-[70vh] object-cover"></video>
+            <div class="p-6 bg-gray-900 flex justify-center rounded-b-2xl border-t border-gray-800">
+                <button onclick="takePhoto()" class="w-16 h-16 bg-white rounded-full border-4 border-gray-300 shadow-[0_0_15px_rgba(255,255,255,0.5)]"></button>
+            </div>
+        </div>
+    </div>
 
     <!-- PDF Viewer Modal -->
     <div id="pdfModal" class="modal-overlay fixed inset-0 flex-col items-center justify-center p-4">
@@ -338,10 +351,11 @@ img, canvas, video, .modal-content {
         let cropper;
         let currentCroppingObject = null;
         let isOverallCropping = false;
+        let resizeCanvas; 
         
-        // Logical A4 Canvas size for export & rendering
-        const A4_WIDTH = 794;
-        const A4_HEIGHT = 1123;
+        // Logical Canvas size for export & rendering (Initially Standard A4 Size)
+        let logicalWidth = 794;
+        let logicalHeight = 1123;
         
         // PDF Variables
         let pdfDoc = null, pdfPageNum = 1, pdfPageIsRendering = false, pdfPageNumPending = null;
@@ -402,10 +416,11 @@ img, canvas, video, .modal-content {
             if (canvas) return;
             canvas = new fabric.Canvas('collageCanvas', { backgroundColor: '#ffffff', preserveObjectStacking: true });
 
-            const resizeCanvas = () => {
+            resizeCanvas = () => {
                 const cw = document.getElementById('canvasWrapper');
-                const scale = Math.min((cw.clientWidth - 40) / A4_WIDTH, (cw.clientHeight - 40) / A4_HEIGHT);
-                canvas.setDimensions({ width: A4_WIDTH * scale, height: A4_HEIGHT * scale });
+                if(!cw) return;
+                const scale = Math.min((cw.clientWidth - 40) / logicalWidth, (cw.clientHeight - 40) / logicalHeight);
+                canvas.setDimensions({ width: logicalWidth * scale, height: logicalHeight * scale });
                 canvas.setZoom(scale);
             };
             window.addEventListener('resize', resizeCanvas);
@@ -421,8 +436,12 @@ img, canvas, video, .modal-content {
         function saveHistory() {
             if (isHistoryHandling) return;
             const json = canvas.toJSON(['customFilters', 'selectable', 'evented']);
+            
+            // Record dynamic logic width and height to preserve sizes on Undo
+            const state = { json: json, width: logicalWidth, height: logicalHeight };
+            
             canvasHistory = canvasHistory.slice(0, historyStep + 1);
-            canvasHistory.push(json);
+            canvasHistory.push(state);
             if(canvasHistory.length > 50) canvasHistory.shift(); else historyStep++;
             updateUndoRedoUI();
         }
@@ -435,20 +454,33 @@ img, canvas, video, .modal-content {
         function undoAction() {
             if (historyStep > 0) {
                 isHistoryHandling = true; historyStep--;
-                canvas.loadFromJSON(canvasHistory[historyStep], () => { canvas.renderAll(); isHistoryHandling = false; updateUndoRedoUI(); });
+                const state = canvasHistory[historyStep];
+                logicalWidth = state.width || 794;
+                logicalHeight = state.height || 1123;
+                if(resizeCanvas) resizeCanvas();
+                canvas.loadFromJSON(state.json, () => { canvas.renderAll(); isHistoryHandling = false; updateUndoRedoUI(); });
             }
         }
 
         function redoAction() {
             if (historyStep < canvasHistory.length - 1) {
                 isHistoryHandling = true; historyStep++;
-                canvas.loadFromJSON(canvasHistory[historyStep], () => { canvas.renderAll(); isHistoryHandling = false; updateUndoRedoUI(); });
+                const state = canvasHistory[historyStep];
+                logicalWidth = state.width || 794;
+                logicalHeight = state.height || 1123;
+                if(resizeCanvas) resizeCanvas();
+                canvas.loadFromJSON(state.json, () => { canvas.renderAll(); isHistoryHandling = false; updateUndoRedoUI(); });
             }
         }
         
         function fullReset() {
             if (!confirm("আপনি কি নিশ্চিত? ক্যানভাসের সমস্ত ছবি এবং কাজ মুছে যাবে!")) return;
             
+            // Reset Logical Sizes back to A4
+            logicalWidth = 794;
+            logicalHeight = 1123;
+            if(resizeCanvas) resizeCanvas();
+
             canvas.clear();
             canvas.setBackgroundColor('#ffffff', canvas.renderAll.bind(canvas));
             
@@ -467,8 +499,8 @@ img, canvas, video, .modal-content {
         }
 
         function centerAndAddItem(img) {
-            if (img.width > A4_WIDTH * 0.8) img.scaleToWidth(A4_WIDTH * 0.8);
-            img.set({ customFilters: { br: 0, ct: 0, st: 0, sh: 0 }, left: (A4_WIDTH - img.getScaledWidth()) / 2, top: (A4_HEIGHT - img.getScaledHeight()) / 2 });
+            if (img.width > logicalWidth * 0.8) img.scaleToWidth(logicalWidth * 0.8);
+            img.set({ customFilters: { br: 0, ct: 0, st: 0, sh: 0 }, left: (logicalWidth - img.getScaledWidth()) / 2, top: (logicalHeight - img.getScaledHeight()) / 2 });
             canvas.add(img); canvas.setActiveObject(img);
         }
 
@@ -510,97 +542,115 @@ img, canvas, video, .modal-content {
         }
         function closePdfModal() { document.getElementById('pdfModal').classList.remove('active'); }
 
-      // --- CAMERA ---
-let localStream = null;
-let videoTrack = null;
-let flashState = false;
+        // --- CAMERA WITH FLASH CONTROL ---
+        let localStream = null;
+        let isFlashOn = false;
 
-async function openCameraModal() {
-    document.getElementById('cameraModal').classList.add('active');
-    try { 
-        localStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: "environment" } } }); 
-    } 
-    catch (e1) { 
-        try { localStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } }); } 
-        catch (e2) { try { localStream = await navigator.mediaDevices.getUserMedia({ video: true }); } 
-        catch (e3) { alert("ক্যামেরা অন করতে সমস্যা হচ্ছে। পারমিশন চেক করুন।"); closeCameraModal(); return; } } 
-    }
-    
-    const video = document.getElementById('cameraVideo');
-    video.srcObject = localStream;
-
-    // Check Flash (Torch) Capability safely
-    try {
-        videoTrack = localStream.getVideoTracks()[0];
-        const btnFlash = document.getElementById('btnFlash');
-        
-        // Some devices don't support getCapabilities, so we wrap it in try-catch
-        if (videoTrack.getCapabilities && videoTrack.getCapabilities().torch) {
-            btnFlash.classList.remove('hidden');
-            flashState = false;
-            btnFlash.classList.remove('bg-yellow-500', 'text-black');
-            btnFlash.classList.add('text-white');
-        } else {
-            if(btnFlash) btnFlash.classList.add('hidden');
-        }
-    } catch(err) {
-        console.log("Flash not supported or readable on this device/browser.");
-    }
-}
-
-async function toggleFlash() {
-    if (!videoTrack) return;
-    flashState = !flashState;
-    try {
-        await videoTrack.applyConstraints({
-            advanced: [{ torch: flashState }]
-        });
-        const btnFlash = document.getElementById('btnFlash');
-        if(flashState) {
-            btnFlash.classList.add('bg-yellow-500', 'text-black');
-            btnFlash.classList.remove('text-white');
-        } else {
-            btnFlash.classList.remove('bg-yellow-500', 'text-black');
-            btnFlash.classList.add('text-white');
-        }
-    } catch (err) {
-        console.error("Flash error:", err);
-        flashState = !flashState; // Revert state if error occurs
-    }
-}
-
-function closeCameraModal() {
-    document.getElementById('cameraModal').classList.remove('active');
-    if (localStream) { 
-        try {
-            // Turn off flash before closing if it's on
-            if(videoTrack && flashState) {
-                videoTrack.applyConstraints({advanced: [{torch: false}]}).catch(e => console.log(e));
+        async function openCameraModal() {
+            document.getElementById('cameraModal').classList.add('active');
+            isFlashOn = false;
+            updateFlashButtonUI();
+            
+            try { 
+                localStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: "environment" } } }); 
+            } 
+            catch (e1) { 
+                try { 
+                    localStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } }); 
+                } 
+                catch (e2) { 
+                    try { 
+                        localStream = await navigator.mediaDevices.getUserMedia({ video: true }); 
+                    } 
+                    catch (e3) { 
+                        alert("Camera error: " + e3.message); 
+                        closeCameraModal(); 
+                        return; 
+                    } 
+                } 
             }
-        } catch(e) {}
-        
-        localStream.getTracks().forEach(t => t.stop()); 
-        localStream = null; 
-        videoTrack = null;
-        flashState = false;
-    }
-}
+            
+            const video = document.getElementById('cameraVideo');
+            video.srcObject = localStream;
+            
+            // Check Flash Support
+            const tracks = localStream.getVideoTracks();
+            if (tracks.length > 0) {
+                const track = tracks[0];
+                let hasTorch = false;
+                try {
+                    const capabilities = track.getCapabilities();
+                    hasTorch = !!capabilities.torch;
+                } catch(err) {
+                    hasTorch = false;
+                }
+                
+                // Show flash button if likely supported
+                document.getElementById('btnToggleFlash').style.display = 'block';
+            }
+        }
 
-function takePhoto() {
-    const v = document.getElementById('cameraVideo');
-    const c = document.createElement('canvas'); 
-    c.width = v.videoWidth; 
-    c.height = v.videoHeight;
-    c.getContext('2d').drawImage(v, 0, 0);
-    
-    // Add captured image to canvas
-    fabric.Image.fromURL(c.toDataURL('image/png'), centerAndAddItem);
-    
-    closeCameraModal();
-}
+        async function toggleFlash() {
+            if (!localStream) return;
+            const tracks = localStream.getVideoTracks();
+            if (tracks.length > 0) {
+                const track = tracks[0];
+                isFlashOn = !isFlashOn;
+                
+                try {
+                    await track.applyConstraints({
+                        advanced: [{ torch: isFlashOn }]
+                    });
+                    updateFlashButtonUI();
+                } catch (err) {
+                    console.log("Flashlight Error:", err);
+                    alert("আপনার ডিভাইসে ফ্ল্যাশলাইট সাপোর্ট করছে না অথবা ব্রাউজারের পারমিশন নেই।");
+                    isFlashOn = !isFlashOn; // Revert state on failure
+                    updateFlashButtonUI();
+                }
+            }
+        }
 
+        function updateFlashButtonUI() {
+            const btn = document.getElementById('btnToggleFlash');
+            if (!btn) return;
+            if (isFlashOn) {
+                btn.classList.add('text-yellow-400', 'bg-gray-800');
+                btn.classList.remove('text-white', 'bg-white/20');
+            } else {
+                btn.classList.add('text-white', 'bg-white/20');
+                btn.classList.remove('text-yellow-400', 'bg-gray-800');
+            }
+        }
 
-        // --- FILTERS ---
+        function closeCameraModal() {
+            document.getElementById('cameraModal').classList.remove('active');
+            
+            if (localStream) { 
+                // Turn off flash before stopping tracks to prevent hardware lockup on some devices
+                const tracks = localStream.getVideoTracks();
+                if (tracks.length > 0) {
+                    try { tracks[0].applyConstraints({ advanced: [{ torch: false }] }); } catch(e){}
+                }
+                
+                localStream.getTracks().forEach(t => t.stop()); 
+                localStream = null; 
+            }
+            isFlashOn = false;
+            document.getElementById('btnToggleFlash').style.display = 'none';
+        }
+
+        function takePhoto() {
+            const v = document.getElementById('cameraVideo');
+            const c = document.createElement('canvas'); 
+            c.width = v.videoWidth; 
+            c.height = v.videoHeight;
+            c.getContext('2d').drawImage(v, 0, 0);
+            fabric.Image.fromURL(c.toDataURL('image/png'), centerAndAddItem);
+            closeCameraModal();
+        }
+
+        // --- FILTERS (Modified for Bottom Modal) ---
         function openAdjustModal() {
             const obj = canvas.getActiveObject();
             if (!obj || obj.type !== 'image') return alert("Please select an image first.");
@@ -609,9 +659,19 @@ function takePhoto() {
             document.getElementById('valContrast').value = obj.customFilters.ct;
             document.getElementById('valSaturation').value = obj.customFilters.st;
             document.getElementById('valSharpness').value = obj.customFilters.sh;
-            updateFilterLabels(); document.getElementById('adjustModal').classList.add('active');
+            updateFilterLabels(); 
+            
+            // Show bottom sheet transparent modal
+            const m = document.getElementById('adjustModal');
+            m.classList.remove('hidden');
+            m.classList.add('flex');
         }
-        function closeAdjustModal() { document.getElementById('adjustModal').classList.remove('active'); saveHistory(); }
+        function closeAdjustModal() { 
+            const m = document.getElementById('adjustModal');
+            m.classList.add('hidden');
+            m.classList.remove('flex');
+            saveHistory(); 
+        }
         function updateFilterLabels() {
             document.getElementById('lblBright').innerText = document.getElementById('valBrightness').value;
             document.getElementById('lblContrast').innerText = document.getElementById('valContrast').value;
@@ -1058,7 +1118,7 @@ function takePhoto() {
                     });
                     
                     // Maintain logical bounds
-                    if (img.width > A4_WIDTH * 0.9) img.scaleToWidth(A4_WIDTH * 0.9);
+                    if (img.width > logicalWidth * 0.9) img.scaleToWidth(logicalWidth * 0.9);
                     
                     canvas.remove(currentCroppingObject); 
                     canvas.add(img); 
@@ -1075,9 +1135,6 @@ function takePhoto() {
             }
         }
 
-
-
-
         // --- STANDARD SQUARE CROP ---
         function cropSelectedElement() {
             const activeObj = canvas.getActiveObject();
@@ -1089,18 +1146,28 @@ function takePhoto() {
             setTimeout(() => { cropper = new Cropper(document.getElementById('cropperImage'), { viewMode: 1, autoCropArea: 0.9, guides: true, background: false }); }, 100);
         }
         function closeCropperModal() { document.getElementById('cropperModal').classList.remove('active'); if(cropper) cropper.destroy(); }
+        
         function applyCrop() {
             if (!cropper) return;
             const url = cropper.getCroppedCanvas().toDataURL('image/png');
+            
             if (isOverallCropping) {
+                // Final Crop - Resize canvas to cropped image bounds
                 fabric.Image.fromURL(url, img => {
-                    canvas.clear(); canvas.setBackgroundColor('#ffffff', canvas.renderAll.bind(canvas));
-                    if (img.width > A4_WIDTH) img.scaleToWidth(A4_WIDTH);
-                    if (img.getScaledHeight() > A4_HEIGHT) img.scaleToHeight(A4_HEIGHT);
-                    img.set({ left: (A4_WIDTH - img.getScaledWidth()) / 2, top: (A4_HEIGHT - img.getScaledHeight()) / 2, selectable: false, evented: false });
-                    canvas.add(img); saveHistory();
+                    logicalWidth = Math.round(img.width);
+                    logicalHeight = Math.round(img.height);
+                    
+                    canvas.clear(); 
+                    canvas.setBackgroundColor('#ffffff', canvas.renderAll.bind(canvas));
+                    
+                    img.set({ left: 0, top: 0, selectable: false, evented: false });
+                    canvas.add(img); 
+                    
+                    if(resizeCanvas) resizeCanvas();
+                    saveHistory();
                 });
             } else {
+                // Individual Image Crop
                 fabric.Image.fromURL(url, img => {
                     img.set({ left: currentCroppingObject.left, top: currentCroppingObject.top, scaleX: currentCroppingObject.scaleX, scaleY: currentCroppingObject.scaleY, angle: currentCroppingObject.angle });
                     canvas.remove(currentCroppingObject); canvas.add(img); canvas.setActiveObject(img);
@@ -1124,9 +1191,9 @@ function takePhoto() {
         
         function overallCrop() {
             canvas.discardActiveObject();
-            const z = canvas.getZoom(); canvas.setZoom(1); canvas.setDimensions({ width: A4_WIDTH, height: A4_HEIGHT });
+            const z = canvas.getZoom(); canvas.setZoom(1); canvas.setDimensions({ width: logicalWidth, height: logicalHeight });
             const url = canvas.toDataURL({ format: 'png', multiplier: 1 });
-            canvas.setZoom(z); canvas.setDimensions({ width: A4_WIDTH * z, height: A4_HEIGHT * z });
+            canvas.setZoom(z); canvas.setDimensions({ width: logicalWidth * z, height: logicalHeight * z });
             isOverallCropping = true; 
             document.getElementById('cropperImage').src = url;
             document.getElementById('cropperModal').classList.add('active');
@@ -1157,22 +1224,23 @@ function takePhoto() {
             const btn = document.querySelector('button[onclick="downloadFile()"]'), orig = btn.innerHTML;
             btn.innerHTML = `PROCESSING...`; btn.disabled = true;
             try {
-                const z = canvas.getZoom(); canvas.setZoom(1); canvas.setDimensions({ width: A4_WIDTH, height: A4_HEIGHT });
+                const z = canvas.getZoom(); canvas.setZoom(1); canvas.setDimensions({ width: logicalWidth, height: logicalHeight });
                 const base = canvas.toDataURL({ format: 'png', multiplier: 1 });
-                canvas.setZoom(z); canvas.setDimensions({ width: A4_WIDTH * z, height: A4_HEIGHT * z });
+                canvas.setZoom(z); canvas.setDimensions({ width: logicalWidth * z, height: logicalHeight * z });
                 const name = document.getElementById('fileName').value.trim() || 'Collage_Document';
                 const format = document.getElementById('exportFormat').value;
                 const finalUrl = await compressImageToTargetKB(base, parseInt(document.getElementById('targetKB').value), format);
                 if (format === 'jpg') {
                     const a = document.createElement('a'); a.download = `${name}.jpg`; a.href = finalUrl; a.click();
                 } else {
-                    const doc = new window.jspdf.jsPDF({ orientation: 'p', unit: 'px', format: [A4_WIDTH, A4_HEIGHT] });
-                    doc.addImage(finalUrl, 'JPEG', 0, 0, A4_WIDTH, A4_HEIGHT); doc.save(`${name}.pdf`);
+                    const orientation = logicalWidth > logicalHeight ? 'l' : 'p';
+                    const doc = new window.jspdf.jsPDF({ orientation: orientation, unit: 'px', format: [logicalWidth, logicalHeight] });
+                    doc.addImage(finalUrl, 'JPEG', 0, 0, logicalWidth, logicalHeight); 
+                    doc.save(`${name}.pdf`);
                 }
             } catch(e) { alert("Download failed."); } finally { btn.innerHTML = orig; btn.disabled = false; }
         }
-        
-        document.addEventListener('contextmenu', event => event.preventDefault());
     </script>
 </body>
 </html>
+
